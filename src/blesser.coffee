@@ -42,8 +42,16 @@ cleanBlessed = (mimosaConfig, options, next) ->
   next()
 
 checkForBless = (mimosaConfig, options, next) ->
-  #TODO: support blessing in watch mode if files get added
-  next()
+  blessOnWatch = mimosaConfig.bless.blessOnWatch
+  isWatch = mimosaConfig.isWatch
+  return next() unless blessOnWatch and isWatch
+  files = _ options.files
+    .map (file) ->
+      file.outputFileName
+    .uniq()
+    .value()
+
+  blessFiles files, mimosaConfig, next
 
 gatherFiles = (filesFromOptions) ->
   _ filesFromOptions
@@ -57,25 +65,11 @@ gatherFiles = (filesFromOptions) ->
     .uniq()
     .value()
 
-blessAll = (mimosaConfig, options, next) ->
-  #TODO: for some reason this goes really slow in watch mode
-  #when working with a large code base, need to investigate
-  isBuild = mimosaConfig.isBuild
-  settings = mimosaConfig.bless.options
-  files = gatherFiles mimosaConfig.bless.files
-
-  blessOnWatch = mimosaConfig.bless.blessOnWatch
-
-  logger.debug "bless files: #{files}"
-  logger.debug "blessOnWatch: #{blessOnWatch}"
-  logger.debug "isBuild: #{isBuild}"
-  unless blessOnWatch or isBuild
-    next()
-    return
+blessFiles = (files, config, next) ->
+  settings = config.bless.options
 
   logger.info "Blessing files"
 
-  #TODO: support output per filename via object entry if desired
   sources = _.map files, (value, key) ->
     input = if _.isString(key) then key else value
     output = value
@@ -89,6 +83,23 @@ blessAll = (mimosaConfig, options, next) ->
     blessFile input, output, settings, (blessData) ->
       writeFiles blessData, input, output if !!blessData
       finish input
+
+blessAll = (mimosaConfig, options, next) ->
+  #TODO: for some reason this goes really slow in watch mode
+  #when working with a large code base, need to investigate
+  isBuild = mimosaConfig.isBuild
+  files = gatherFiles mimosaConfig.bless.files
+
+  blessOnWatch = mimosaConfig.bless.blessOnWatch
+
+  logger.debug "bless files: #{files}"
+  logger.debug "blessOnWatch: #{blessOnWatch}"
+  logger.debug "isBuild: #{isBuild}"
+  unless blessOnWatch or isBuild
+    next()
+    return
+
+  blessFiles files, mimosaConfig, next
 
 blessCommand = (retrieveConfig) ->
   retrieveConfig false, (config) ->

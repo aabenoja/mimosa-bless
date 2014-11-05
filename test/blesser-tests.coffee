@@ -68,4 +68,27 @@ describe "blessAll", ->
       expect(writeFilesSpy.called).to.be.false
       done()
 
+describe "checkForBless", ->
+  blessFilesSpy = blessFilesRewire = checkForBless = {}
+
+  testConfig =
+    isWatch: true
+    bless:
+      blessOnWatch: true
+      options: {}
+
+  beforeEach ->
+    checkForBless = blesser.__get__ "checkForBless"
+
+    blessFilesSpy = sinon.spy()
+    blessFilesRewire = blesser.__set__ 'blessFiles', blessFilesSpy
+
+  afterEach ->
+    blessFilesRewire()
+
+  it "blesses files on watch", ->
+    checkForBless testConfig, {}, ->
+
+    expect(blessFilesSpy.called).to.be.true
+
   #TODO: more test coverage
