@@ -37,6 +37,20 @@ blessFile = (input, output, options, next) ->
     logger.info "Source CSS file [[ #{input} ]] contained #{numSelectors} selectors"
     next blessData
 
+removeBlessed = (files) ->
+  logger.info "Removing blessed assets"
+  _ files
+    .map (file) ->
+      basename = path.basename file, ".css"
+      dirname = path.dirname file
+      wrench.readdirSyncRecursive(dirname).filter (f) ->
+        (new RegExp "#{basename}-blessed\\d\\.css$").test f
+      .map (f) -> path.join dirname, f
+    .flatten()
+    .uniq()
+    .each (file) ->
+      fs.unlinkSync file
+
 cleanBlessed = (mimosaConfig, options, next) ->
   #TODO: clean up any generated bless files
   next()
@@ -51,6 +65,7 @@ checkForBless = (mimosaConfig, options, next) ->
     .uniq()
     .value()
 
+  removeBlessed files
   blessFiles files, mimosaConfig, next
 
 gatherFiles = (filesFromOptions) ->
